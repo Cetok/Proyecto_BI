@@ -1,0 +1,103 @@
+{
+  "business_context": "Data Mart de detección de fraude en transacciones de pequeños comercios.",
+  "allowed_tables": [
+    "fact_transaccion",
+    "dim_cliente",
+    "dim_comercio",
+    "dim_tarjeta",
+    "dim_tiempo",
+    "dim_ubicacion"
+  ],
+  "metrics": {
+    "total_transacciones": "COUNT(DISTINCT fact_transaccion.trans_num)",
+    "monto_total": "SUM(fact_transaccion.monto_transaccion)",
+    "transacciones_fraude": "SUM(CASE WHEN fact_transaccion.fraude_flag = true THEN 1 ELSE 0 END)",
+    "tasa_fraude": "ROUND(SUM(CASE WHEN fact_transaccion.fraude_flag = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2)",
+    "monto_fraudulento_total": "SUM(fact_transaccion.monto_fraudulento)",
+    "monto_promedio_transaccion": "ROUND(AVG(fact_transaccion.monto_transaccion), 2)"
+  },
+  "tables": {
+    "fact_transaccion": {
+      "grain": "Una fila representa una transacción financiera individual.",
+      "columns": {
+        "id_fact_transaccion": "Identificador único de la fila de hecho.",
+        "sk_tiempo": "Clave foránea a dim_tiempo.",
+        "sk_cliente": "Clave foránea a dim_cliente.",
+        "sk_comercio": "Clave foránea a dim_comercio.",
+        "sk_ubicacion": "Clave foránea a dim_ubicacion.",
+        "sk_tarjeta": "Clave foránea a dim_tarjeta.",
+        "trans_num": "Número único de transacción.",
+        "monto_transaccion": "Monto de la transacción en moneda local.",
+        "fraude_flag": "Indicador booleano: true si la transacción es fraudulenta.",
+        "cantidad_transaccion": "Cantidad de ítems en la transacción.",
+        "monto_fraudulento": "Monto considerado fraudulento en la transacción."
+      }
+    },
+    "dim_cliente": {
+      "grain": "Una fila representa un cliente único.",
+      "columns": {
+        "sk_cliente": "Clave subrogada del cliente.",
+        "id_cliente": "Identificador natural del cliente.",
+        "nombre_cliente": "Nombre completo del cliente.",
+        "genero": "Género del cliente.",
+        "fecha_nacimiento": "Fecha de nacimiento del cliente.",
+        "edad": "Edad del cliente en años.",
+        "rango_edad": "Rango etario del cliente (ej: 18-25, 26-35)."
+      }
+    },
+    "dim_comercio": {
+      "grain": "Una fila representa un comercio o establecimiento.",
+      "columns": {
+        "sk_comercio": "Clave subrogada del comercio.",
+        "id_comercio": "Identificador natural del comercio.",
+        "nombre_comercio": "Nombre del comercio.",
+        "categoria_comercio": "Categoría o rubro del comercio.",
+        "pais_comercio": "País donde opera el comercio."
+      }
+    },
+    "dim_tarjeta": {
+      "grain": "Una fila representa una tarjeta de pago.",
+      "columns": {
+        "sk_tarjeta": "Clave subrogada de la tarjeta.",
+        "id_tarjeta": "Identificador natural de la tarjeta.",
+        "ultimos_4": "Últimos 4 dígitos de la tarjeta.",
+        "marca_tarjeta": "Marca de la tarjeta (Visa, Mastercard, etc.).",
+        "tipo_tarjeta": "Tipo de tarjeta (débito, crédito).",
+        "banco_emisor": "Banco que emitió la tarjeta.",
+        "fecha_vencimiento": "Fecha de vencimiento de la tarjeta."
+      }
+    },
+    "dim_tiempo": {
+      "grain": "Una fila representa un punto temporal con fecha y hora.",
+      "columns": {
+        "sk_tiempo": "Clave subrogada de tiempo.",
+        "fecha": "Fecha completa de la transacción.",
+        "anio": "Año de la transacción.",
+        "mes": "Mes de la transacción (1-12).",
+        "dia_semana": "Día de la semana (Lunes, Martes, etc.).",
+        "es_fin_semana": "Indicador booleano: true si es fin de semana.",
+        "hora": "Hora del día (1-24).",
+        "franja_horaria": "Franja horaria del día (Madrugada, Mañana, Tarde, Noche)."
+      }
+    },
+    "dim_ubicacion": {
+      "grain": "Una fila representa una ubicación geográfica de la transacción.",
+      "columns": {
+        "sk_ubicacion": "Clave subrogada de la ubicación.",
+        "pais": "País de la transacción.",
+        "region": "Región o estado.",
+        "ciudad": "Ciudad.",
+        "latitud": "Latitud geográfica.",
+        "longitud": "Longitud geográfica.",
+        "zona_riesgo": "Clasificación de riesgo de la zona (Alto, Medio, Bajo)."
+      }
+    }
+  },
+  "relationships": [
+    "fact_transaccion.sk_tiempo = dim_tiempo.sk_tiempo",
+    "fact_transaccion.sk_cliente = dim_cliente.sk_cliente",
+    "fact_transaccion.sk_comercio = dim_comercio.sk_comercio",
+    "fact_transaccion.sk_ubicacion = dim_ubicacion.sk_ubicacion",
+    "fact_transaccion.sk_tarjeta = dim_tarjeta.sk_tarjeta"
+  ]
+}
