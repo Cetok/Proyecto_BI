@@ -1,6 +1,5 @@
 # GenBI — Detección de Fraude en Pequeños Comercios
 
-Sistema de Business Intelligence Generativa que permite hacer preguntas en lenguaje natural sobre transacciones financieras y obtener respuestas en SQL, explicaciones de negocio y visualizaciones automáticas.
 
 ---
 
@@ -18,8 +17,7 @@ El validador bloquea cualquier comando peligroso (DELETE, DROP, etc.)
 Supabase ejecuta la consulta sobre el Data Mart de fraude
         ↓
 Claude genera una explicación de negocio del resultado
-        ↓
-Se recomienda y renderiza un gráfico automático
+
 ```
 
 ---
