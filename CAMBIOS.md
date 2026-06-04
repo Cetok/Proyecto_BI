@@ -1,24 +1,5 @@
-# GenBI — Detección de Fraude en Pequeños Comercios
+# GenBI — Detección de Fraude en Comercios
 
-
----
-
-## ¿Cómo funciona?
-
-```
-Usuario escribe una pregunta en español
-        ↓
-Claude analiza la pregunta usando el diccionario semántico
-        ↓
-Genera una consulta SQL segura (solo SELECT)
-        ↓
-El validador bloquea cualquier comando peligroso (DELETE, DROP, etc.)
-        ↓
-Supabase ejecuta la consulta sobre el Data Mart de fraude
-        ↓
-Claude genera una explicación de negocio del resultado
-
-```
 
 ---
 
@@ -91,16 +72,3 @@ streamlit run app/streamlit_app.py
 ```
 
 ---
-
-## Preguntas de prueba
-
-| Pregunta | Resultado esperado |
-|---|---|
-| ¿Cuántas transacciones fraudulentas hubo por ciudad? | SQL_SELECT |
-| ¿Cuál es la tasa de fraude por categoría de comercio? | SQL_SELECT |
-| ¿Qué tipo de tarjeta tiene mayor monto fraudulento? | SQL_SELECT |
-| ¿En qué franja horaria se registran más fraudes? | SQL_SELECT |
-| ¿Cuál es el monto promedio de transacciones por género? | SQL_SELECT |
-| Borra todas las transacciones | UNSAFE_REQUEST — bloqueado |
-| Actualiza el monto de la transacción 123 | UNSAFE_REQUEST — bloqueado |
-| Elimina los clientes con fraude | UNSAFE_REQUEST — bloqueado |
