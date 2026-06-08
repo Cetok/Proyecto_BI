@@ -17,6 +17,13 @@ from business_explainer import explain_result
 from chart_recommender import recommend_chart_type
 from chart_generator import render_chart
 
+from semantic_context_retriever import retrieve_semantic_context
+from dashboard_planner import generate_dashboard_plan
+from plan_validator import validate_dashboard_plan
+from query_orchestrator import execute_dashboard_plan
+from dashboard_renderer import render_generated_dashboard
+from dashboard_insight_generator import generate_dashboard_insight
+
 
 # Convierte markdown a HTML limpio (sin signos raros)
 def _inline(text: str) -> str:
@@ -354,151 +361,277 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ─── PREGUNTA ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="query-container">', unsafe_allow_html=True)
-st.markdown('<div class="query-label">💬 Escribe tu pregunta de negocio</div>', unsafe_allow_html=True)
+# ─── TABS ─────────────────────────────────────────────────────────────────────
+tab_single, tab_dashboard = st.tabs(["💬 Pregunta Individual", "📊 Dashboard Generator"])
 
-col_q, col_btn = st.columns([5, 1])
-with col_q:
-    question = st.text_input(
-        label="question",
+# ─── TAB 1: PREGUNTA INDIVIDUAL ───────────────────────────────────────────────
+with tab_single:
+    st.markdown('<div class="query-container">', unsafe_allow_html=True)
+    st.markdown('<div class="query-label">💬 Escribe tu pregunta de negocio</div>', unsafe_allow_html=True)
+
+    col_q, col_btn = st.columns([5, 1])
+    with col_q:
+        question = st.text_input(
+            label="question",
+            label_visibility="collapsed",
+            placeholder="Ej: ¿Cuáles son los comercios con más transacciones fraudulentas este año?",
+            key="question_input"
+        )
+    with col_btn:
+        btn = st.button("🔍 Consultar", use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if btn:
+        if not question.strip():
+            st.warning("✏️ Escribe una pregunta antes de continuar.")
+            st.stop()
+
+        # 1 — Generar SQL
+        with st.spinner("🤖 Generando SQL con IA…"):
+            semantic_dictionary = load_semantic_dictionary()
+            prompt = build_prompt(question, semantic_dictionary)
+            response = generate_sql(prompt)
+
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">💡</div>
+            <div class="card-title">Respuesta de la IA</div>
+            <span class="card-badge badge-info">GENERADO</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        st.code(response, language="sql")
+
+        if response == "UNSAFE_REQUEST":
+            st.error("🚫 **Solicitud bloqueada** — La pregunta intenta modificar o eliminar datos del sistema.")
+            st.stop()
+        if response == "OUT_OF_SCOPE":
+            st.warning("⚠️ **Fuera de alcance** — Esta pregunta no puede responderse con el Data Mart disponible.")
+            st.stop()
+
+        sql = response.replace("SQL_SELECT", "", 1).strip() if response.startswith("SQL_SELECT") else response
+
+        # 2 — SQL limpio
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">⚙️</div>
+            <div class="card-title">SQL Generado</div>
+            <span class="card-badge badge-info">SQL</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        st.code(sql, language="sql")
+
+        # 3 — Validación
+        is_valid, message = validate_sql(sql, semantic_dictionary)
+
+        icon_c = "green" if is_valid else "orange"
+        badge_c = "badge-success" if is_valid else "badge-error"
+        badge_t = "VÁLIDO" if is_valid else "INVÁLIDO"
+
+        st.markdown(f"""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon {icon_c}">✓</div>
+            <div class="card-title">Validación SQL</div>
+            <span class="card-badge {badge_c}">{badge_t}</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+        if not is_valid:
+            st.error(f"❌ {message}")
+            st.stop()
+        st.success(f"✅ {message}")
+
+        # 4 — Ejecutar
+        with st.spinner("🐘 Ejecutando en PostgreSQL…"):
+            df = run_query(sql)
+
+        st.markdown(f"""
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="metric-value">{len(df):,}</div>
+            <div class="metric-label">Filas devueltas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">{df.shape[1]}</div>
+            <div class="metric-label">Columnas</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value">{len(df) * df.shape[1]:,}</div>
+            <div class="metric-label">Celdas totales</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">📊</div>
+            <div class="card-title">Resultado de la Consulta</div>
+            <span class="card-badge badge-success">EJECUTADO</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+        # 5 — Interpretación de negocio
+        with st.spinner("🔎 Generando interpretación de negocio…"):
+            business_explanation = explain_result(question=question, sql=sql, df=df)
+
+        expl_html = md_html(business_explanation)
+        st.markdown(f"""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon purple">🔎</div>
+            <div class="card-title">Interpretación de Negocio</div>
+            <span class="card-badge badge-info">IA</span>
+          </div>
+          <div class="explanation-wrap">
+            {expl_html}
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+        # 6 — Visualización
+        with st.spinner("📈 Generando visualización…"):
+            chart_type = recommend_chart_type(question, df)
+
+        ICONS  = {"bar": "📊", "line": "📈", "pie": "🥧", "scatter": "🔵"}
+        LABELS = {"bar": "Barras", "line": "Línea", "pie": "Pastel", "scatter": "Dispersión"}
+
+        st.markdown(f"""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon orange">📈</div>
+            <div class="card-title">Visualización Inteligente</div>
+            <span class="card-badge badge-info">ECHARTS</span>
+          </div>
+          <div class="chart-chip">
+            {ICONS.get(chart_type,"📊")}&nbsp;
+            Gráfico de {LABELS.get(chart_type, chart_type).upper()}
+            &nbsp;— recomendado por IA
+          </div>
+        </div>""", unsafe_allow_html=True)
+        render_chart(df, chart_type)
+
+# ─── TAB 2: DASHBOARD GENERATOR ───────────────────────────────────────────────
+with tab_dashboard:
+    st.markdown('<div class="query-container">', unsafe_allow_html=True)
+    st.markdown('<div class="query-label">📊 Pregunta ejecutiva de negocio</div>', unsafe_allow_html=True)
+
+    dashboard_question = st.text_area(
+        label="dashboard_question",
         label_visibility="collapsed",
-        placeholder="Ej: ¿Cuáles son los comercios con más transacciones fraudulentas este año?",
-        key="question_input"
+        placeholder=(
+            "Ej: Genera un dashboard ejecutivo para analizar el desempeño comercial general, "
+            "considerando venta total, ticket promedio, número de ventas, evolución mensual, "
+            "categorías principales y ciudades con mayor contribución."
+        ),
+        height=100,
+        key="dashboard_question_input"
     )
-with col_btn:
-    btn = st.button("🔍 Consultar", use_container_width=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
+    btn_dash = st.button("📊 Generar Dashboard", use_container_width=False, key="btn_dashboard")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# ─── FLUJO ────────────────────────────────────────────────────────────────────
-if btn:
-    if not question.strip():
-        st.warning("✏️ Escribe una pregunta antes de continuar.")
-        st.stop()
+    if btn_dash:
+        if not dashboard_question.strip():
+            st.warning("✏️ Escribe una pregunta ejecutiva antes de continuar.")
+            st.stop()
 
-    # 1 — Generar SQL
-    with st.spinner("🤖 Generando SQL con IA…"):
         semantic_dictionary = load_semantic_dictionary()
-        prompt = build_prompt(question, semantic_dictionary)
-        response = generate_sql(prompt)
 
-    st.markdown("""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon blue">💡</div>
-        <div class="card-title">Respuesta de la IA</div>
-        <span class="card-badge badge-info">GENERADO</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
-    st.code(response, language="sql")
+        # 1 — Contexto semántico
+        with st.spinner("🔎 Recuperando contexto semántico…"):
+            semantic_context = retrieve_semantic_context(dashboard_question)
 
-    if response == "UNSAFE_REQUEST":
-        st.error("🚫 **Solicitud bloqueada** — La pregunta intenta modificar o eliminar datos del sistema.")
-        st.stop()
-    if response == "OUT_OF_SCOPE":
-        st.warning("⚠️ **Fuera de alcance** — Esta pregunta no puede responderse con el Data Mart disponible.")
-        st.stop()
+        with st.expander("Contexto semántico recuperado", expanded=False):
+            st.markdown(semantic_context)
 
-    sql = response.replace("SQL_SELECT", "", 1).strip() if response.startswith("SQL_SELECT") else response
+        # 2 — Plan analítico
+        with st.spinner("🤖 Generando plan analítico…"):
+            dashboard_plan = generate_dashboard_plan(
+                question=dashboard_question,
+                semantic_dictionary=semantic_dictionary,
+                semantic_context=semantic_context
+            )
 
-    # 2 — SQL limpio
-    st.markdown("""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon blue">⚙️</div>
-        <div class="card-title">SQL Generado</div>
-        <span class="card-badge badge-info">SQL</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
-    st.code(sql, language="sql")
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue">🗺️</div>
+            <div class="card-title">Plan generado por la IA</div>
+            <span class="card-badge badge-info">JSON</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        st.json(dashboard_plan)
 
-    # 3 — Validación
-    is_valid, message = validate_sql(sql, semantic_dictionary)
+        # 3 — Validación del plan
+        is_valid_plan, plan_message = validate_dashboard_plan(dashboard_plan, semantic_dictionary)
 
-    icon_c = "green" if is_valid else "orange"
-    badge_c = "badge-success" if is_valid else "badge-error"
-    badge_t = "VÁLIDO" if is_valid else "INVÁLIDO"
+        badge_p = "badge-success" if is_valid_plan else "badge-error"
+        badge_t_p = "VÁLIDO" if is_valid_plan else "INVÁLIDO"
+        icon_p = "green" if is_valid_plan else "orange"
 
-    st.markdown(f"""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon {icon_c}">✓</div>
-        <div class="card-title">Validación SQL</div>
-        <span class="card-badge {badge_c}">{badge_t}</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon {icon_p}">✓</div>
+            <div class="card-title">Validación del Plan</div>
+            <span class="card-badge {badge_p}">{badge_t_p}</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
 
-    if not is_valid:
-        st.error(f"❌ {message}")
-        st.stop()
-    st.success(f"✅ {message}")
+        if not is_valid_plan:
+            st.error(f"❌ {plan_message}")
+            st.stop()
+        st.success(f"✅ {plan_message}")
 
-    # 4 — Ejecutar
-    with st.spinner("🐘 Ejecutando en PostgreSQL…"):
-        df = run_query(sql)
+        # 4 — Lectura pedagógica del plan
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon purple">📋</div>
+            <div class="card-title">Lectura del Plan</div>
+            <span class="card-badge badge-info">ESTRUCTURA</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="metrics-row">
-      <div class="metric-card">
-        <div class="metric-value">{len(df):,}</div>
-        <div class="metric-label">Filas devueltas</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">{df.shape[1]}</div>
-        <div class="metric-label">Columnas</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">{len(df) * df.shape[1]:,}</div>
-        <div class="metric-label">Celdas totales</div>
-      </div>
-    </div>""", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**KPIs propuestos**")
+            for kpi in dashboard_plan.get("kpis", []):
+                st.markdown(f"- **{kpi.get('title')}** `{kpi.get('metric')}`")
+                st.caption(kpi.get("query_intent", ""))
+        with col2:
+            st.markdown("**Visualizaciones propuestas**")
+            for visual in dashboard_plan.get("visuals", []):
+                st.markdown(f"- **{visual.get('title')}** — `{visual.get('chart_type')}`")
+                st.caption(visual.get("query_intent", ""))
 
-    st.markdown("""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon blue">📊</div>
-        <div class="card-title">Resultado de la Consulta</div>
-        <span class="card-badge badge-success">EJECUTADO</span>
-      </div>
-    </div>""", unsafe_allow_html=True)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+        # 5 — Ejecución del plan
+        with st.spinner("🐘 Generando y ejecutando múltiples consultas SQL…"):
+            execution_results = execute_dashboard_plan(dashboard_plan, semantic_dictionary)
 
-    # 5 — Interpretación de negocio
-    with st.spinner("🔎 Generando interpretación de negocio…"):
-        business_explanation = explain_result(question=question, sql=sql, df=df)
+        render_generated_dashboard(plan=dashboard_plan, execution_results=execution_results)
 
-    expl_html = md_html(business_explanation)
-    st.markdown(f"""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon purple">🔎</div>
-        <div class="card-title">Interpretación de Negocio</div>
-        <span class="card-badge badge-info">IA</span>
-      </div>
-      <div class="explanation-wrap">
-        {expl_html}
-      </div>
-    </div>""", unsafe_allow_html=True)
+        # 6 — Insight ejecutivo
+        st.divider()
+        st.markdown("""
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon purple">🔎</div>
+            <div class="card-title">Insight Ejecutivo</div>
+            <span class="card-badge badge-info">IA</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
 
-    # 6 — Visualización
-    with st.spinner("📈 Generando visualización…"):
-        chart_type = recommend_chart_type(question, df)
+        with st.spinner("🔎 Generando insight ejecutivo…"):
+            dashboard_insight = generate_dashboard_insight(
+                question=dashboard_question,
+                dashboard_plan=dashboard_plan,
+                execution_results=execution_results,
+                semantic_context=semantic_context
+            )
 
-    ICONS  = {"bar": "📊", "line": "📈", "pie": "🥧", "scatter": "🔵"}
-    LABELS = {"bar": "Barras", "line": "Línea", "pie": "Pastel", "scatter": "Dispersión"}
-
-    st.markdown(f"""
-    <div class="card">
-      <div class="card-header">
-        <div class="card-icon orange">📈</div>
-        <div class="card-title">Visualización Inteligente</div>
-        <span class="card-badge badge-info">ECHARTS</span>
-      </div>
-      <div class="chart-chip">
-        {ICONS.get(chart_type,"📊")}&nbsp;
-        Gráfico de {LABELS.get(chart_type, chart_type).upper()}
-        &nbsp;— recomendado por IA
-      </div>
-    </div>""", unsafe_allow_html=True)
-    render_chart(df, chart_type)
+        insight_html = md_html(dashboard_insight)
+        st.markdown(f'<div class="explanation-wrap">{insight_html}</div>', unsafe_allow_html=True)
