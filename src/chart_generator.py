@@ -51,7 +51,7 @@ def infer_chart_axes(df, chart_type):
     return None, None
 
 
-# Estilos base dark reutilizables
+# Estilos base light/high-contrast reutilizables
 _ANIM = {
     "animation": True,
     "animationDuration": 900,
@@ -61,31 +61,31 @@ _ANIM = {
 
 _TOOLTIP_AXIS = {
     "trigger": "axis",
-    "backgroundColor": "rgba(13,17,23,0.95)",
-    "borderColor": "rgba(59,130,246,0.35)",
+    "backgroundColor": "rgba(15,23,42,0.95)",
+    "borderColor": "rgba(37,99,235,0.35)",
     "borderWidth": 1,
-    "textStyle": {"color": "#e2e8f0", "fontSize": 13, "fontFamily": "Inter"},
-    "axisPointer": {"type": "shadow", "shadowStyle": {"color": "rgba(59,130,246,0.06)"}},
+    "textStyle": {"color": "#f8fafc", "fontSize": 13, "fontFamily": "Inter"},
+    "axisPointer": {"type": "shadow", "shadowStyle": {"color": "rgba(37,99,235,0.04)"}},
 }
 
 _TOOLTIP_ITEM = {
     "trigger": "item",
-    "backgroundColor": "rgba(13,17,23,0.95)",
-    "borderColor": "rgba(59,130,246,0.35)",
+    "backgroundColor": "rgba(15,23,42,0.95)",
+    "borderColor": "rgba(37,99,235,0.35)",
     "borderWidth": 1,
-    "textStyle": {"color": "#e2e8f0", "fontSize": 13, "fontFamily": "Inter"},
+    "textStyle": {"color": "#f8fafc", "fontSize": 13, "fontFamily": "Inter"},
 }
 
 _GRID = {"left": "4%", "right": "4%", "bottom": "12%", "top": "10%", "containLabel": True}
 
 _LEGEND = {
     "bottom": 4,
-    "textStyle": {"color": "#64748b", "fontSize": 12},
+    "textStyle": {"color": "#475569", "fontSize": 12},
     "icon": "roundRect", "itemWidth": 14, "itemHeight": 8,
 }
 
 _X_AXIS_BASE = {
-    "axisLine": {"lineStyle": {"color": "rgba(255,255,255,0.08)"}},
+    "axisLine": {"lineStyle": {"color": "rgba(15,23,42,0.08)"}},
     "axisTick": {"show": False},
     "splitLine": {"show": False},
 }
@@ -93,7 +93,7 @@ _X_AXIS_BASE = {
 _Y_AXIS_BASE = {
     "axisLine": {"show": False},
     "axisTick": {"show": False},
-    "splitLine": {"lineStyle": {"color": "rgba(255,255,255,0.05)", "type": "dashed"}},
+    "splitLine": {"lineStyle": {"color": "rgba(15,23,42,0.06)", "type": "dashed"}},
 }
 
 
@@ -118,13 +118,13 @@ def render_chart(df, chart_type):
                 "type": "category", "data": categories,
                 "axisLabel": {
                     "rotate": 30 if len(categories) > 6 else 0,
-                    "color": "#64748b", "fontSize": 12,
+                    "color": "#475569", "fontSize": 12,
                 },
                 **_X_AXIS_BASE,
             },
             "yAxis": {
                 "type": "value",
-                "axisLabel": {"color": "#64748b", "fontSize": 11},
+                "axisLabel": {"color": "#475569", "fontSize": 11},
                 **_Y_AXIS_BASE,
             },
             "series": [{
@@ -137,12 +137,12 @@ def render_chart(df, chart_type):
                 "emphasis": {
                     "itemStyle": {
                         "color": _grad(GRADIENT_PAIRS[1][0], GRADIENT_PAIRS[1][1]),
-                        "shadowBlur": 14, "shadowColor": "rgba(59,130,246,0.4)",
+                        "shadowBlur": 14, "shadowColor": "rgba(37,99,235,0.4)",
                     }
                 },
                 "label": {
                     "show": True, "position": "top",
-                    "color": "#64748b", "fontSize": 11, "fontWeight": "600",
+                    "color": "#475569", "fontSize": 11, "fontWeight": "600",
                 },
                 "data": values,
             }],
@@ -159,30 +159,30 @@ def render_chart(df, chart_type):
                 "type": "category", "data": categories, "boundaryGap": False,
                 "axisLabel": {
                     "rotate": 30 if len(categories) > 8 else 0,
-                    "color": "#64748b", "fontSize": 12,
+                    "color": "#475569", "fontSize": 12,
                 },
                 **_X_AXIS_BASE,
             },
             "yAxis": {
                 "type": "value",
-                "axisLabel": {"color": "#64748b", "fontSize": 11},
+                "axisLabel": {"color": "#475569", "fontSize": 11},
                 **_Y_AXIS_BASE,
             },
             "series": [{
                 "name": y_col, "type": "line",
                 "smooth": True, "symbol": "circle", "symbolSize": 8,
-                "lineStyle": {"width": 3, "color": "#3b82f6"},
+                "lineStyle": {"width": 3, "color": "#2563eb"},
                 "itemStyle": {
-                    "color": "#ffffff", "borderColor": "#3b82f6", "borderWidth": 3,
-                    "shadowColor": "rgba(59,130,246,0.5)", "shadowBlur": 8,
+                    "color": "#ffffff", "borderColor": "#2563eb", "borderWidth": 3,
+                    "shadowColor": "rgba(37,99,235,0.3)", "shadowBlur": 8,
                 },
                 "areaStyle": {
-                    "color": _grad("rgba(59,130,246,0.22)", "rgba(59,130,246,0.01)")
+                    "color": _grad("rgba(37,99,235,0.15)", "rgba(37,99,235,0.01)")
                 },
                 "emphasis": {
                     "itemStyle": {
-                        "color": "#3b82f6", "borderColor": "white", "borderWidth": 2,
-                        "shadowBlur": 18, "shadowColor": "rgba(59,130,246,0.6)",
+                        "color": "#2563eb", "borderColor": "white", "borderWidth": 2,
+                        "shadowBlur": 18, "shadowColor": "rgba(37,99,235,0.5)",
                     }
                 },
                 "data": values,
@@ -205,15 +205,15 @@ def render_chart(df, chart_type):
                 "radius": ["38%", "68%"],
                 "center": ["50%", "46%"],
                 "padAngle": 3,
-                "itemStyle": {"borderRadius": 6, "borderColor": "#0d1117", "borderWidth": 2},
+                "itemStyle": {"borderRadius": 6, "borderColor": "#ffffff", "borderWidth": 2},
                 "label": {
                     "show": True,
                     "formatter": "{b}\n{d}%",
-                    "color": "#94a3b8", "fontSize": 12, "fontWeight": "600",
+                    "color": "#334155", "fontSize": 12, "fontWeight": "600",
                 },
-                "labelLine": {"length": 14, "length2": 8, "smooth": True, "lineStyle": {"color": "#475569"}},
+                "labelLine": {"length": 14, "length2": 8, "smooth": True, "lineStyle": {"color": "#cbd5e1"}},
                 "emphasis": {
-                    "itemStyle": {"shadowBlur": 20, "shadowColor": "rgba(0,0,0,0.5)"},
+                    "itemStyle": {"shadowBlur": 20, "shadowColor": "rgba(0,0,0,0.15)"},
                     "scale": True, "scaleSize": 6,
                 },
                 "data": pie_data,
@@ -230,27 +230,27 @@ def render_chart(df, chart_type):
             "xAxis": {
                 "type": "value",
                 "name": x_col, "nameLocation": "middle", "nameGap": 30,
-                "nameTextStyle": {"color": "#64748b", "fontSize": 12},
-                "axisLabel": {"color": "#64748b", "fontSize": 11},
-                **{**_X_AXIS_BASE, "axisLine": {"lineStyle": {"color": "rgba(255,255,255,0.08)"}}},
-                "splitLine": {"lineStyle": {"color": "rgba(255,255,255,0.05)", "type": "dashed"}},
+                "nameTextStyle": {"color": "#475569", "fontSize": 12},
+                "axisLabel": {"color": "#475569", "fontSize": 11},
+                **{**_X_AXIS_BASE, "axisLine": {"lineStyle": {"color": "rgba(15,23,42,0.08)"}}},
+                "splitLine": {"lineStyle": {"color": "rgba(15,23,42,0.05)", "type": "dashed"}},
             },
             "yAxis": {
                 "type": "value",
                 "name": y_col, "nameLocation": "middle", "nameGap": 44,
-                "nameTextStyle": {"color": "#64748b", "fontSize": 12},
-                "axisLabel": {"color": "#64748b", "fontSize": 11},
+                "nameTextStyle": {"color": "#475569", "fontSize": 12},
+                "axisLabel": {"color": "#475569", "fontSize": 11},
                 **_Y_AXIS_BASE,
             },
             "series": [{
                 "type": "scatter", "symbolSize": 11,
                 "itemStyle": {
-                    "color": _grad("#3b82f6", "#8b5cf6"),
+                    "color": _grad("#2563eb", "#7c3aed"),
                     "opacity": 0.82,
-                    "shadowBlur": 8, "shadowColor": "rgba(59,130,246,0.35)",
+                    "shadowBlur": 8, "shadowColor": "rgba(37,99,235,0.25)",
                 },
                 "emphasis": {
-                    "itemStyle": {"opacity": 1, "shadowBlur": 18, "shadowColor": "rgba(59,130,246,0.6)"}
+                    "itemStyle": {"opacity": 1, "shadowBlur": 18, "shadowColor": "rgba(37,99,235,0.5)"}
                 },
                 "data": scatter_data,
             }],
@@ -264,12 +264,12 @@ def render_chart(df, chart_type):
             "grid": _GRID,
             "xAxis": {
                 "type": "category", "data": categories,
-                "axisLabel": {"color": "#64748b"},
+                "axisLabel": {"color": "#475569"},
                 **_X_AXIS_BASE,
             },
             "yAxis": {
                 "type": "value",
-                "axisLabel": {"color": "#64748b"},
+                "axisLabel": {"color": "#475569"},
                 **_Y_AXIS_BASE,
             },
             "series": [{
