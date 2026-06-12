@@ -1,0 +1,42 @@
+[
+  {
+    "question": "¿Cuál es el monto total de transacciones por categoría de comercio?",
+    "sql": "SELECT dc.categoria_comercio, SUM(ft.monto_transaccion) AS monto_total FROM fact_transaccion ft JOIN dim_comercio dc ON ft.sk_comercio = dc.sk_comercio GROUP BY dc.categoria_comercio ORDER BY monto_total DESC;"
+  },
+  {
+    "question": "¿Cuál es la tasa de fraude por banco emisor de tarjeta?",
+    "sql": "SELECT dt.banco_emisor, ROUND(SUM(CASE WHEN ft.fraude_flag = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS tasa_fraude FROM fact_transaccion ft JOIN dim_tarjeta dt ON ft.sk_tarjeta = dt.sk_tarjeta GROUP BY dt.banco_emisor ORDER BY tasa_fraude DESC;"
+  },
+  {
+    "question": "¿Cuáles son los comercios con mayor monto fraudulento total?",
+    "sql": "SELECT dc.nombre_comercio, SUM(ft.monto_fraudulento) AS monto_fraudulento_total FROM fact_transaccion ft JOIN dim_comercio dc ON ft.sk_comercio = dc.sk_comercio GROUP BY dc.nombre_comercio ORDER BY monto_fraudulento_total DESC LIMIT 10;"
+  },
+  {
+    "question": "¿Cuál es la cantidad de transacciones fraudulentas por mes en el año 2025?",
+    "sql": "SELECT dt.mes, SUM(CASE WHEN ft.fraude_flag = true THEN 1 ELSE 0 END) AS transacciones_fraude FROM fact_transaccion ft JOIN dim_tiempo dt ON ft.sk_tiempo = dt.sk_tiempo WHERE dt.anio = 2025 GROUP BY dt.mes ORDER BY dt.mes ASC;"
+  },
+  {
+    "question": "¿Cuál es el promedio de monto de transacción por género y rango de edad?",
+    "sql": "SELECT dc.genero, dc.rango_edad, ROUND(AVG(ft.monto_transaccion), 2) AS monto_promedio_transaccion FROM fact_transaccion ft JOIN dim_cliente dc ON ft.sk_cliente = dc.sk_cliente GROUP BY dc.genero, dc.rango_edad ORDER BY dc.rango_edad;"
+  },
+  {
+    "question": "¿Cuántas transacciones fraudulentas ocurrieron en fin de semana en zonas de alto riesgo?",
+    "sql": "SELECT du.zona_riesgo, SUM(CASE WHEN ft.fraude_flag = true THEN 1 ELSE 0 END) AS transacciones_fraude FROM fact_transaccion ft JOIN dim_tiempo dt ON ft.sk_tiempo = dt.sk_tiempo JOIN dim_ubicacion du ON ft.sk_ubicacion = du.sk_ubicacion WHERE dt.es_fin_semana = true AND du.zona_riesgo = 'Alto' GROUP BY du.zona_riesgo;"
+  },
+  {
+    "question": "¿Cuáles son las marcas de tarjeta y tipo de tarjeta con mayor tasa de fraude?",
+    "sql": "SELECT dt.marca_tarjeta, dt.tipo_tarjeta, ROUND(SUM(CASE WHEN ft.fraude_flag = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS tasa_fraude FROM fact_transaccion ft JOIN dim_tarjeta dt ON ft.sk_tarjeta = dt.sk_tarjeta GROUP BY dt.marca_tarjeta, dt.tipo_tarjeta ORDER BY tasa_fraude DESC;"
+  },
+  {
+    "question": "¿Cuáles son las 5 ciudades con mayor número de transacciones totales?",
+    "sql": "SELECT du.ciudad, COUNT(DISTINCT ft.trans_num) AS total_transacciones FROM fact_transaccion ft JOIN dim_ubicacion du ON ft.sk_ubicacion = du.sk_ubicacion GROUP BY du.ciudad ORDER BY total_transacciones DESC LIMIT 5;"
+  },
+  {
+    "question": "¿Cuál es la tasa de fraude en las diferentes franjas horarias del día?",
+    "sql": "SELECT dt.franja_horaria, ROUND(SUM(CASE WHEN ft.fraude_flag = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS tasa_fraude FROM fact_transaccion ft JOIN dim_tiempo dt ON ft.sk_tiempo = dt.sk_tiempo GROUP BY dt.franja_horaria ORDER BY tasa_fraude DESC;"
+  },
+  {
+    "question": "¿Cuáles son los 10 clientes con mayor monto total transaccionado?",
+    "sql": "SELECT dc.nombre_cliente, SUM(ft.monto_transaccion) AS monto_total FROM fact_transaccion ft JOIN dim_cliente dc ON ft.sk_cliente = dc.sk_cliente GROUP BY dc.nombre_cliente ORDER BY monto_total DESC LIMIT 10;"
+  }
+]

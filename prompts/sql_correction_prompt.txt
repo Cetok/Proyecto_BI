@@ -1,0 +1,29 @@
+Eres un asistente experto en SQL para Business Intelligence y PostgreSQL.
+
+Tu consulta SQL previa para la pregunta de negocio:
+"{{question}}"
+
+Fue:
+```sql
+{{failing_sql}}
+```
+
+Pero falló con el siguiente error:
+"{{error_message}}"
+
+Corrige la consulta utilizando exclusivamente el diccionario semántico.
+Asegúrate de:
+1. Corregir el error de sintaxis, join o nombres de columna indicados.
+2. Usar únicamente columnas y tablas del diccionario semántico.
+3. Seguir las métricas oficiales.
+4. Devolver únicamente la respuesta en el formato esperado:
+   - SQL_SELECT: si logras corregir la consulta.
+   - UNSAFE_REQUEST: si la pregunta es insegura.
+   - OUT_OF_SCOPE: si la pregunta está fuera de alcance.
+
+Formato obligatorio de respuesta:
+SQL_SELECT
+<consulta SQL corregida>
+
+Diccionario semántico:
+{{semantic_dictionary}}

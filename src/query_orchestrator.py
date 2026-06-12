@@ -1,5 +1,5 @@
 from prompt_builder import build_prompt
-from llm_client import generate_sql
+from llm_client import generate_sql, generate_sql_correction
 from sql_validator import validate_sql
 from db import run_query
 
@@ -23,13 +23,86 @@ def normalize_sql_response(response: str) -> str:
     return response
 
 
+def generate_and_validate_sql_with_retry(question: str, semantic_dictionary: dict, max_retries: int = 3) -> dict:
+    """
+    Generates SQL from natural language, validates it, and executes it.
+    If validation or execution fails, it calls the LLM for self-correction.
+    Runs up to `max_retries` times.
+    """
+    prompt = build_prompt(question, semantic_dictionary)
+    response = generate_sql(prompt)
+
+    if response in ("UNSAFE_REQUEST", "OUT_OF_SCOPE"):
+        return {
+            "status": response,
+            "sql": None,
+            "dataframe": None,
+            "retries": 0,
+            "error": f"La IA retornó un estado: {response}",
+            "history": []
+        }
+
+    sql = normalize_sql_response(response)
+    try_count = 0
+    history = []
+
+    while try_count <= max_retries:
+        # 1. Deterministic Validation
+        is_valid, validation_message = validate_sql(sql, semantic_dictionary)
+        
+        if not is_valid:
+            error_msg = f"Validación determinista fallida: {validation_message}"
+            history.append({"sql": sql, "error": error_msg, "phase": "validation"})
+            if try_count < max_retries:
+                try_count += 1
+                sql = normalize_sql_response(generate_sql_correction(question, sql, error_msg, semantic_dictionary))
+                continue
+            else:
+                return {
+                    "status": "SQL_VALIDATION_FAILED",
+                    "sql": sql,
+                    "dataframe": None,
+                    "retries": try_count,
+                    "error": error_msg,
+                    "history": history
+                }
+
+        # 2. Database Execution Test
+        try:
+            df = run_query(sql)
+            return {
+                "status": "SUCCESS",
+                "sql": sql,
+                "dataframe": df,
+                "retries": try_count,
+                "error": None,
+                "history": history
+            }
+        except Exception as e:
+            error_msg = f"Error de ejecución en DB: {str(e)}"
+            history.append({"sql": sql, "error": error_msg, "phase": "execution"})
+            if try_count < max_retries:
+                try_count += 1
+                sql = normalize_sql_response(generate_sql_correction(question, sql, error_msg, semantic_dictionary))
+                continue
+            else:
+                return {
+                    "status": "EXECUTION_FAILED",
+                    "sql": sql,
+                    "dataframe": None,
+                    "retries": try_count,
+                    "error": error_msg,
+                    "history": history
+                }
+
+
 def execute_dashboard_plan(plan: dict, semantic_dictionary: dict) -> list:
     """
     Executes all analytical items from a dashboard plan.
 
     The planner defines analytical intentions.
     This orchestrator turns each intention into SQL using the existing
-    Text-to-SQL flow, validates it, executes it and stores the result.
+    Text-to-SQL flow with self-healing, executes it and stores the result.
 
     Returns a list of execution results.
     """
@@ -65,67 +138,25 @@ def execute_dashboard_plan(plan: dict, semantic_dictionary: dict) -> list:
             execution_results.append({
                 **item,
                 "status": "FAILED",
-                "message": "Missing query_intent.",
+                "message": "Falta query_intent.",
                 "sql": None,
-                "dataframe": None
+                "dataframe": None,
+                "retries": 0,
+                "history": []
             })
             continue
 
-        prompt = build_prompt(query_intent, semantic_dictionary)
-        response = generate_sql(prompt)
+        res = generate_and_validate_sql_with_retry(query_intent, semantic_dictionary)
 
-        if response == "UNSAFE_REQUEST":
-            execution_results.append({
-                **item,
-                "status": "UNSAFE_REQUEST",
-                "message": "The generated query was blocked as unsafe.",
-                "sql": None,
-                "dataframe": None
-            })
-            continue
-
-        if response == "OUT_OF_SCOPE":
-            execution_results.append({
-                **item,
-                "status": "OUT_OF_SCOPE",
-                "message": "The generated query is outside the semantic scope.",
-                "sql": None,
-                "dataframe": None
-            })
-            continue
-
-        sql = normalize_sql_response(response)
-
-        is_valid, validation_message = validate_sql(sql, semantic_dictionary)
-
-        if not is_valid:
-            execution_results.append({
-                **item,
-                "status": "SQL_VALIDATION_FAILED",
-                "message": validation_message,
-                "sql": sql,
-                "dataframe": None
-            })
-            continue
-
-        try:
-            df = run_query(sql)
-
-            execution_results.append({
-                **item,
-                "status": "SUCCESS",
-                "message": validation_message,
-                "sql": sql,
-                "dataframe": df
-            })
-
-        except Exception as e:
-            execution_results.append({
-                **item,
-                "status": "EXECUTION_FAILED",
-                "message": str(e),
-                "sql": sql,
-                "dataframe": None
-            })
+        execution_results.append({
+            **item,
+            "status": res["status"],
+            "message": res["error"] if res["error"] else "SQL aprobado y ejecutado con éxito.",
+            "sql": res["sql"],
+            "dataframe": res["dataframe"],
+            "retries": res["retries"],
+            "history": res["history"]
+        })
 
     return execution_results
+

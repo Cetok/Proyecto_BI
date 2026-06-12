@@ -30,5 +30,8 @@ OUT_OF_SCOPE
 Diccionario semántico:
 {{semantic_dictionary}}
 
+Ejemplos de consultas de referencia similares (aprende de su estructura y joins):
+{{few_shot_examples}}
+
 Pregunta del usuario:
 {{question}}

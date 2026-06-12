@@ -281,4 +281,5 @@ def render_chart(df, chart_type):
             }],
         }
 
-    st_echarts(options=options, height="480px")
+    import uuid
+    st_echarts(options=options, height="480px", key=f"chart_{uuid.uuid4().hex}")

@@ -27,7 +27,7 @@ def explain_result(question, sql, df):
     message = client.messages.create(
         model=ANTHROPIC_MODEL,
         max_tokens=1024,
-        system="Eres un analista senior de Business Intelligence.",
+        system="Eres un Agente Experto en Gestión de Riesgo de Fraude y Ciberseguridad.",
         messages=[
             {"role": "user", "content": prompt}
         ]
